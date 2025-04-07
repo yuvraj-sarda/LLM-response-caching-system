@@ -1,1 +1,21 @@
-# LLM-response-caching-system
+# An LLM Response Caching System
+A high-performance semantic caching system designed to reduce LLM API costs while maintaining response quality. The system intelligently identifies and caches semantically similar queries, significantly reducing redundant LLM calls.
+
+## Setup and Running Instructions
+
+## Architecture Overview and Design Decisions
+For the main language, I decided to use Python – it's simple, well-established and has a lot of related ML packages.
+
+For the server architecture, there are many popular technologies that could be used: Flask, FastAPI, and Django. I went with FastAPI because it seems like it is [better](https://www.netguru.com/blog/python-flask-versus-fastapi) for speed and performance (which is of high priority here). I've also worked with it before so it was quicker to setup for this project.
+
+OpenAI recently updated to a new Responses API and they recommend using it for new projects. So, I'm using it instead of the traditional Chat Completions API.
+
+## Explanation of your semantic similarity approach 
+(including why you chose specific embedding models and/or cross-encoders)
+
+## Tradeoffs and Optimizations
+- Discussion of tradeoffs and potential optimizations
+
+
+## Future Work
+If I had more time to work on this, what would I have done?
