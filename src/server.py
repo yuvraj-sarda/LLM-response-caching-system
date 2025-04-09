@@ -30,8 +30,8 @@ def health_check():
 @app.post("/api/query", response_model=QueryResponse)
 async def handle_query(request: QueryRequest):
     if (not request.forceRefresh):    
-      cache_response: str = await query_cache(request.query)
-      if (cache_response):
+      cache_response: str | None = await query_cache(request.query)
+      if (cache_response != None):
         return QueryResponse(
             response=cache_response,
             metadata=QueryMetadata(source="cache")
