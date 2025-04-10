@@ -1,5 +1,5 @@
-QueryText, ExpectedCacheHit
+QueryText,ExpectedCacheHit
 "What's the current time in Vancouver?","The current time in Vancouver is 11:45 AM PDT."
 "Explain how a fingerprint scanner works","Fingerprint scanners use optical or capacitive sensors to capture the unique pattern of ridges and valleys. The image is converted to a digital template for comparison."
-"What time is it in Vancouver right now?", "The current time in Vancouver is 11:45 AM PDT."
-"Who was Alan Turing?", ""
+"What time is it in Vancouver right now?","The current time in Vancouver is 11:45 AM PDT."
+"Who was Alan Turing?",""

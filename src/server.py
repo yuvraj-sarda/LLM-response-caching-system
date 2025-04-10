@@ -7,8 +7,8 @@ load_dotenv()
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Optional
-from query_llm import query_llm
-from query_cache import query_cache
+from .query_llm import query_llm
+from .query_cache import query_cache
 
 app = FastAPI()
 

@@ -12,7 +12,10 @@ async def query_cache(query: str) -> str | None:
       return None
     
     case "exact_match_only":
-      return await redis_client.get(query)
+      print("trying to get redis_client query")
+      cached_item = redis_client.get(query)
+      print(f"{cached_item=}")
+      return cached_item
     
     # Add more cases
     # * Small local LLM cache
@@ -21,4 +24,4 @@ async def query_cache(query: str) -> str | None:
     
     case _:
       print(f"The caching strategy was not set, or is unknown: {strategy}. Using default")
-      result = await redis_client.get(query)
+      return redis_client.get(query)

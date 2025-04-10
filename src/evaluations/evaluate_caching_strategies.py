@@ -11,7 +11,7 @@ import asyncio
 from src.server import handle_query, QueryRequest
 from src.redis_client import redis_client
 
-
+# TODO: reorder functions in this file
 def calculate_cost(queryText: str, responseText: str, source: str) -> float:
     """Calculate the cost of a request based on its source and query length."""
     match source:
@@ -23,10 +23,10 @@ def calculate_cost(queryText: str, responseText: str, source: str) -> float:
         # Rough estimate: 1 token ~= 4 characters
         input_tokens = len(queryText) / 4
         # Assume output is roughly same length as input
-        output_tokens = len(queryText) / 4
+        output_tokens = len(responseText) / 4
         return (input_tokens * 0.03 + output_tokens * 0.06) / 1000
       case _:
-        print("ERR: unsupported cache source")
+        print(f"Warning: unsupported response source: {source}")
         return 0.0
 
 async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.DataFrame:
@@ -38,7 +38,7 @@ async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.Dat
 
     for index, row in test_queries.iterrows():
         queryText = row["QueryText"]
-        expected_cache_hit = bool(row["ExpectedCacheHit"])
+        expected_cache_hit = row["ExpectedCacheHit"]
         
         # Time the query
         start_time = time.time()
@@ -49,10 +49,11 @@ async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.Dat
         test_queries.at[index, strategy + '_response_time'] = end_time - start_time
         test_queries.at[index, strategy + '_cost'] = calculate_cost(queryText, response.response, response.metadata.source)
         
+        # TODO: i'm not sure if this code is working as expected; might be buggy.
         if expected_cache_hit == "": # if we don't expect cache hit
-          cache_hit_correctly: bool = response.metadata.source == "llm"
+          cache_hit_correctly: bool = (response.metadata.source == 'llm')
         else: # we expect cache hit
-          cache_hit_correctly: bool = response.response == expected_cache_hit
+          cache_hit_correctly: bool = (response.response == expected_cache_hit)
           
         test_queries.at[index, strategy + '_cache_hit_correctly'] = cache_hit_correctly
         
@@ -62,38 +63,53 @@ async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.Dat
     
     return test_queries
 
+async def save_aggregated_results(test_results: pd.DataFrame, strategy) -> bool:
+    # Calculate summary statistics for this strategy
+    avg_response_time = test_results[strategy + '_response_time'].mean()
+    avg_cost = test_results[strategy + '_cost'].mean()
+    avg_accuracy = test_results[strategy + '_cache_hit_correctly'].mean()
+    
+    # Create markdown content
+    markdown_content = f"""
+## Strategy: {strategy}
+- Average response time: {avg_response_time:.4f} seconds
+- Average cost per query: ${avg_cost:.6f}
+- Average cache hit accuracy: {avg_accuracy:.2%}
+
+""" 
+    # Write to file
+    with open("src/evaluations/test_results_aggregated.md", "a") as f:
+        f.write(markdown_content)
+
 async def main():
-    print("Flushing db")
     redis_client.flushdb()
-    print("DB has been cleared")
-
+    print("Flushed the db")
+    
     past_queries = pd.read_csv("src/evaluations/past_queries.csv")
-
-    print("Caching past queries...")
     for index, row in past_queries.iterrows():
         redis_client.set(row['QueryText'], row['ResponseText'])
-        print(f"Cached query {index + 1}: {row['QueryText'][:50]}...")
 
-    print("Finished caching all queries!")
+    print("Cached all queries.")
 
-    test_queries = pd.read_csv("src/evaluations/test_queries.csv")
+    # Read test queries with proper handling of empty strings
+    test_queries = pd.read_csv(
+        "src/evaluations/test_queries.csv",
+        keep_default_na=True,
+        na_values=['']
+    )
 
     # Test different caching strategies
-    for strategy in ["no_cache", "exact_match_only"]:
-        test_queries = await evaluate_strategy(strategy, test_queries)
+    for strategy in ["exact_match_only", "no_cache"]:
+        test_results = await evaluate_strategy(strategy, test_queries)
+              
+        # Save results with proper handling of empty values
+        test_results.to_csv(
+            "src/evaluations/test_results.csv",
+            index=False,
+            na_rep=''
+        )
         
-        # Calculate and print summary statistics for this strategy
-        avg_response_time = test_queries[strategy + '_response_time'].mean()
-        avg_cost = test_queries[strategy + '_cost'].mean()
-        avg_accuracy = test_queries[strategy + '_cache_hit_correctly'].mean()
-        
-        print(f"\nStrategy: {strategy}")
-        print(f"Average response time: {avg_response_time:.4f} seconds")
-        print(f"Average cost per query: ${avg_cost:.6f}")
-        print(f"Average cache hit accuracy: {avg_accuracy:.2%}")
-        
-        # Save results for this strategy
-        test_queries.to_csv(f"src/evaluations/test_results.csv", index=False)
+        save_aggregated_results(test_results, strategy)
 
 if __name__ == "__main__":
     asyncio.run(main())

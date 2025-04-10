@@ -1,17 +1,32 @@
+import os
+import logging
+from datetime import datetime
 from openai import OpenAI
 client = OpenAI()
 from .cache_response import cache_response
-  
+
+os.makedirs('logs', exist_ok=True)
+logging.basicConfig(
+    filename='logs/llm_queries.txt',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
 async def query_llm(query: str) -> str:
   try:
     response = client.responses.create(
       model="gpt-4o",
       instructions="You are a helpful assistant.",
       input=query,
-    )
+    )    
 
-    print(response)
+    logging.info(f"Query: {query}")
+    logging.info(f"Response: {response}")
+    logging.info("="*50)  # Separator between entries
+    
     cache_response(query, response.output_text)
+    
     return response.output_text
   except Exception as e:
     print(f"Error in query_llm: {e}")

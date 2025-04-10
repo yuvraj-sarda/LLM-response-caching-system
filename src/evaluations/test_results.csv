@@ -1,0 +1,5 @@
+QueryText,ExpectedCacheHit,exact_match_only_response_time,exact_match_only_cost,exact_match_only_cache_hit_correctly,no_cache_response_time,no_cache_cost,no_cache_cache_hit_correctly
+What's the current time in Vancouver?,The current time in Vancouver is 11:45 AM PDT.,0.0009338855743408203,0.0,True,1.5233111381530762,0.0008324999999999999,False
+Explain how a fingerprint scanner works,Fingerprint scanners use optical or capacitive sensors to capture the unique pattern of ridges and valleys. The image is converted to a digital template for comparison.,0.0003330707550048828,0.0,True,6.806378126144409,0.0008774999999999999,False
+What time is it in Vancouver right now?,The current time in Vancouver is 11:45 AM PDT.,2.112920045852661,0.0008774999999999999,False,1.468040943145752,0.0008774999999999999,False
+Who was Alan Turing?,,5.29370903968811,0.00044999999999999993,False,3.5263099670410156,0.00044999999999999993,False
