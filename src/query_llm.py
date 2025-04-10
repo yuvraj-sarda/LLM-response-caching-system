@@ -1,6 +1,6 @@
 from openai import OpenAI
 client = OpenAI()
-from redis_client import redis_client
+from .cache_response import cache_response
   
 async def query_llm(query: str) -> str:
   try:
@@ -11,9 +11,8 @@ async def query_llm(query: str) -> str:
     )
 
     print(response)
-    
-    redis_client.set(query, response.output_text)
+    cache_response(query, response.output_text)
     return response.output_text
   except Exception as e:
-    print(e)
+    print(f"Error in query_llm: {e}")
     return "Unfortunately, LLM querying is not available right now due to an internal error. Please try again later." # handle error gracefully

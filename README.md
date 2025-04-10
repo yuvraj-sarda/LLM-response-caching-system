@@ -12,6 +12,8 @@ OpenAI recently updated to a new Responses API and they recommend using it for n
 
 For caching, I chose Redis as the primary caching solution because it provides incredibly fast access times, has built-in data structures for similarity search, and can handle our target throughput of 100 requests/second. It's also widely used, well documented, is docker friendly and has persistence options.
 
+For the tests, I'm using pytest – based on quick research, it seems to be the industry standard.
+
 ## Explanation of your semantic similarity approach 
 (including why you chose specific embedding models and/or cross-encoders)
 

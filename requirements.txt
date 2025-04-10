@@ -3,3 +3,5 @@ redis
 fastapi[standard]
 pydantic
 python-dotenv
+pytest
+pandas

@@ -28,7 +28,7 @@ def health_check():
     return {"status": "The server is working."}
 
 @app.post("/api/query", response_model=QueryResponse)
-async def handle_query(request: QueryRequest):
+async def handle_query(request: QueryRequest) -> QueryResponse:
     if (not request.forceRefresh):    
       cache_response: str | None = await query_cache(request.query)
       if (cache_response != None):
