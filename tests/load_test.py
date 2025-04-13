@@ -2,10 +2,11 @@
 This file is used to test the performance of the API under load.
 
 To run it:
-python3 tests/load_test.py
+DISABLE_AUTO_CACHE=TRUE python3 tests/load_test.py
 
+Note: The DISABLE_AUTO_CACHE environment variable must be set to "TRUE" before running the script.
 
-Note: if redis has some results already cached and you want to empty the cache, run:
+If redis has some results already cached and you want to empty the cache, run:
 docker ps | grep redis
 and then
 docker exec <container_name> redis-cli FLUSHALL
@@ -55,6 +56,11 @@ class LoadTestResults:
     def cache_hit_rate(self) -> float:
         return (self.cache_hits / self.total_requests) * 100
 
+    @property
+    def max_llm_query_time(self) -> float:
+        llm_times = [t['llm_query'] for t in self.timing_details if 'llm_query' in t]
+        return max(llm_times) if llm_times else 0.0
+
     def print_results(self) -> None:
         print(f"\nLoad Test Results:")
         print(f"Total requests: {self.total_requests}")
@@ -78,6 +84,7 @@ class LoadTestResults:
             if llm_times:
                 print(f"Average LLM query time: {statistics.mean(llm_times):.2f} seconds")
                 print(f"Median LLM query time: {statistics.median(llm_times):.2f} seconds")
+                print(f"Maximum LLM query time: {self.max_llm_query_time:.2f} seconds")
 
     def save_to_csv(self) -> None:
         csv_file = os.path.join("logs", f"load_test.csv")
@@ -102,7 +109,6 @@ class LoadTestResults:
 
 async def send_query(session: aiohttp.ClientSession, query: str, test_start_time: float) -> Dict:
     """Send a single query to the API and return the response time and metadata."""
-    print(f"Sending query: {query[:10]}...")
     start_time = time.time()
     try:
         async with session.post(
@@ -137,22 +143,14 @@ async def send_query(session: aiohttp.ClientSession, query: str, test_start_time
 
 async def run_load_test(num_requests: int = 100) -> LoadTestResults:
     """Run a load test with the specified number of concurrent requests."""
-    # Sample queries to use for testing
-    test_queries = [
-        "What is the capital of France?",
-        "Explain quantum computing in simple terms",
-        "What are the benefits of exercise?",
-        "How does photosynthesis work?",
-        "What is the meaning of life?",
-        "Tell me about the history of the internet",
-        "What are the main causes of climate change?",
-        "How do I make a good cup of coffee?",
-        "What is machine learning?",
-        "Explain the theory of relativity"
-    ]
+    # Read queries from CSV file
+    queries = []
+    with open('tests/load_test_queries.csv', 'r') as f:
+        reader = csv.DictReader(f)
+        queries = [row['query'] for row in reader]
     
     # Repeat queries to reach desired number of requests
-    queries = [test_queries[i % len(test_queries)] for i in range(num_requests)]
+    queries = [queries[i % len(queries)] for i in range(num_requests)]
     
     test_start_time = time.time()
     async with aiohttp.ClientSession() as session:
@@ -175,7 +173,11 @@ async def run_load_test(num_requests: int = 100) -> LoadTestResults:
     )
 
 if __name__ == "__main__":
-    os.environ["DISABLE_AUTO_CACHE"] = "TRUE"
+    if os.environ.get("DISABLE_AUTO_CACHE") != "TRUE":
+        print("Warning: DISABLE_AUTO_CACHE is not set to TRUE. Please run the script with:")
+        print("DISABLE_AUTO_CACHE=TRUE python3 tests/load_test.py")
+        exit(1)
+    
     results = asyncio.run(run_load_test())
     results.print_results()
     results.save_to_csv()
