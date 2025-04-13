@@ -3,7 +3,7 @@ import logging
 from datetime import datetime
 from openai import OpenAI
 client = OpenAI()
-from .cache_response import cache_response
+from cache_response import cache_response
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(

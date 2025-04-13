@@ -5,11 +5,13 @@ To run it:
 python3 tests/load_test.py
 
 
-Note: if redis has some cached results that you want to remove, you can do so by running:
+Note: if redis has some results already cached and you want to empty the cache, run:
 docker ps | grep redis
 and then
 docker exec <container_name> redis-cli FLUSHALL
 
+Example:
+docker exec llm-response-caching-system-redis-1 redis-cli FLUSHALL
 """
 
 import asyncio
@@ -31,6 +33,7 @@ class LoadTestResults:
     cache_hits: int
     query_details: List[Dict]
     test_start_time: float
+    timing_details: List[Dict]
 
     @property
     def requests_per_second(self) -> float:
@@ -61,6 +64,20 @@ class LoadTestResults:
         print(f"Median response time: {self.median_response_time:.2f} seconds")
         print(f"95th percentile response time: {self.percentile_95_response_time:.2f} seconds")
         print(f"Cache hit rate: {self.cache_hit_rate:.1f}%")
+        
+        # Print timing analysis
+        if self.timing_details:
+            print("\nTiming Analysis:")
+            cache_times = [t['cache_lookup'] for t in self.timing_details if 'cache_lookup' in t]
+            llm_times = [t['llm_query'] for t in self.timing_details if 'llm_query' in t]
+            
+            if cache_times:
+                print(f"Average cache lookup time: {statistics.mean(cache_times):.2f} seconds")
+                print(f"Median cache lookup time: {statistics.median(cache_times):.2f} seconds")
+            
+            if llm_times:
+                print(f"Average LLM query time: {statistics.mean(llm_times):.2f} seconds")
+                print(f"Median LLM query time: {statistics.median(llm_times):.2f} seconds")
 
     def save_to_csv(self) -> None:
         csv_file = os.path.join("logs", f"load_test.csv")
@@ -68,7 +85,7 @@ class LoadTestResults:
         with open(csv_file, 'w', newline='') as f:
             writer = csv.writer(f)
             # Write header
-            writer.writerow(['queryText', 'startTime', 'endTime', 'responseTime', 'source'])
+            writer.writerow(['queryText', 'startTime', 'endTime', 'responseTime', 'source', 'timing'])
             
             # Write each query's details
             for query_detail in self.query_details:
@@ -77,7 +94,8 @@ class LoadTestResults:
                     query_detail['start_time'] - self.test_start_time,
                     query_detail['end_time'] - self.test_start_time,
                     query_detail['response_time'],
-                    query_detail['source']
+                    query_detail['source'],
+                    json.dumps(query_detail.get('timing', {}))
                 ])
         
         print(f"\nDetailed query-wise results saved to: {csv_file}")
@@ -86,19 +104,35 @@ async def send_query(session: aiohttp.ClientSession, query: str, test_start_time
     """Send a single query to the API and return the response time and metadata."""
     print(f"Sending query: {query[:10]}...")
     start_time = time.time()
-    async with session.post(
-        "http://localhost:3000/api/query",
-        json={"query": query, "forceRefresh": False}
-    ) as response:
-        response_data = await response.json()
-        end_time = time.time()
-        response_time = end_time - start_time
+    try:
+        async with session.post(
+            "http://localhost:3000/api/query",
+            json={"query": query, "forceRefresh": False}
+        ) as response:
+            response_data = await response.json()
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            # Safely extract timing information
+            timing = response_data.get("metadata", {}).get("timing", {})
+            
+            return {
+                "query": query,
+                "start_time": start_time,
+                "end_time": end_time,
+                "response_time": response_time,
+                "source": response_data.get("metadata", {}).get("source", "unknown"),
+                "timing": timing
+            }
+    except Exception as e:
+        print(f"Error processing query '{query[:10]}...': {str(e)}")
         return {
             "query": query,
             "start_time": start_time,
-            "end_time": end_time,
-            "response_time": response_time,
-            "source": response_data["metadata"]["source"]
+            "end_time": time.time(),
+            "response_time": time.time() - start_time,
+            "source": "error",
+            "timing": {}
         }
 
 async def run_load_test(num_requests: int = 100) -> LoadTestResults:
@@ -128,6 +162,7 @@ async def run_load_test(num_requests: int = 100) -> LoadTestResults:
     total_time = time.time() - test_start_time
     response_times = [r["response_time"] for r in results]
     cache_hits = sum(1 for r in results if r["source"] == "cache")
+    timing_details = [r["timing"] for r in results]
     
     return LoadTestResults(
         total_requests=num_requests,
@@ -135,11 +170,12 @@ async def run_load_test(num_requests: int = 100) -> LoadTestResults:
         response_times=response_times,
         cache_hits=cache_hits,
         query_details=results,
-        test_start_time=test_start_time
+        test_start_time=test_start_time,
+        timing_details=timing_details
     )
 
 if __name__ == "__main__":
     os.environ["DISABLE_AUTO_CACHE"] = "TRUE"
     results = asyncio.run(run_load_test())
     results.print_results()
-    results.save_to_csv() 
+    results.save_to_csv()
