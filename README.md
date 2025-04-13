@@ -23,3 +23,9 @@ For the tests, I'm using pytest – based on quick research, it seems to be the 
 
 ## Future Work
 If I had more time to work on this, what would I have done?
+
+My evaluation datasets are small; if I had more time, I'd prepare a more robust one.
+
+## Known issues
+* while we the query itself might be time insensitive, the LLM response might be time-sensitive (include numbers or dates that might get outdated). Time sensitivity of something also doesn't just depend on query but also when the query is asked (eg: who's the president of the USA is mostly time insensitive, but is so near the elections).
+* While we might cache a query and get a valid answer back, the retrieved answer might not be perfectly suited (it would be slightly suboptimal; for examples of this, see the semantically similar test queries).

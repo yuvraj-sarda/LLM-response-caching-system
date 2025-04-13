@@ -12,9 +12,7 @@ async def query_cache(query: str) -> str | None:
       return None
     
     case "exact_match_only":
-      print("trying to get redis_client query")
       cached_item = redis_client.get(query)
-      print(f"{cached_item=}")
       return cached_item
     
     # Add more cases

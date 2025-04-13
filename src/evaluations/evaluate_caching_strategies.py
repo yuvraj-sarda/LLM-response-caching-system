@@ -18,24 +18,25 @@ async def main():
     await initialise_cache()
 
     # Read test queries with proper handling of empty strings
-    test_queries = pd.read_csv(
+    test_df = pd.read_csv(
         "src/evaluations/test_queries.csv",
         keep_default_na=True,
         na_values=['']
     )
 
     # Test different caching strategies
-    for strategy in ["exact_match_only", "no_cache"]:
-        test_results = await evaluate_strategy(strategy, test_queries)
+    strategies = ["exact_match_only", "no_cache"]
+    for strategy in strategies:
+        await evaluate_strategy(strategy, test_df)
               
-        # Save results with proper handling of empty values
-        test_results.to_csv(
-            "src/evaluations/test_results.csv",
-            index=False,
-            na_rep=''
-        )
+    # Save results with proper handling of empty values
+    test_df.to_csv(
+        "src/evaluations/test_results.csv",
+        index=False,
+        na_rep=''
+    )
         
-        await save_aggregated_results(test_results, strategy)
+    await save_aggregated_results(test_df, strategies)
 
 async def initialise_cache():
     redis_client.flushdb()
@@ -54,7 +55,10 @@ async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.Dat
     test_queries[strategy + '_cost'] = 0.0
     test_queries[strategy + '_cache_hit_correctly'] = False
 
+    # TODO: right now, everything is being done synchronously, which makes running this very slow (50 tests with ~3 seconds per test = 150 seconds)
+    # We should do this parallely, but there is an issue with cache setting in one test possibly interfering with other tests.
     for index, row in test_queries.iterrows():
+        print(f"Handling test query {index}")
         queryText = row["QueryText"]
         expected_cache_hit = row["ExpectedCacheHit"]
         
@@ -62,6 +66,10 @@ async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.Dat
         start_time = time.time()
         response = await handle_query(QueryRequest(query=queryText))
         end_time = time.time()
+        
+        # Cleanup step: If the query got added to the cache (eg: by an llm call), remove it. 
+        # This ensures each test is independent.
+        redis_client.delete(queryText)
         
         # Calculate & store metrics
         test_queries.at[index, strategy + '_response_time'] = end_time - start_time
@@ -74,21 +82,19 @@ async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.Dat
           cache_hit_correctly: bool = (response.response == expected_cache_hit)
           
         test_queries.at[index, strategy + '_cache_hit_correctly'] = cache_hit_correctly
-        
-        # Cleanup step: If the query got added to the cache (eg: by an llm call), remove it. 
-        # This ensures each test is independent.
-        redis_client.delete(queryText)
     
     return test_queries
 
-async def save_aggregated_results(test_results: pd.DataFrame, strategy) -> bool:
-    # Calculate summary statistics for this strategy
-    avg_response_time = test_results[strategy + '_response_time'].mean()
-    avg_cost = test_results[strategy + '_cost'].mean()
-    avg_accuracy = test_results[strategy + '_cache_hit_correctly'].mean()
-    
-    # Create markdown content
-    markdown_content = f"""
+async def save_aggregated_results(test_results: pd.DataFrame, strategies: list[str]) -> bool:
+    markdown_content = ""
+    for strategy in strategies:
+        # Calculate summary statistics for this strategy
+        avg_response_time = test_results[strategy + '_response_time'].mean()
+        avg_cost = test_results[strategy + '_cost'].mean()
+        avg_accuracy = test_results[strategy + '_cache_hit_correctly'].mean()
+        
+        # Create markdown content
+        markdown_content += f"""
 ## Strategy: {strategy}
 - Average response time: {avg_response_time:.4f} seconds
 - Average cost per query: ${avg_cost:.6f}
@@ -96,7 +102,7 @@ async def save_aggregated_results(test_results: pd.DataFrame, strategy) -> bool:
 
 """ 
     # Write to file
-    with open("src/evaluations/test_results_aggregated.md", "a") as f:
+    with open("src/evaluations/test_results_aggregated.md", "w") as f:
         f.write(markdown_content)
 
 def calculate_cost(queryText: str, responseText: str, source: str) -> float:

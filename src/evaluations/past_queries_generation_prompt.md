@@ -1,3 +1,7 @@
+This is the prompt I used to generate the past_queries. If you copy paste it into Cursor Chat, it'll generate a new similar dataset for you. If you regenerate this dataset though, ensure you also update the test dataset by making the appopriate edits to the test_queries_generation_prompt.
+
+=======
+
 We are preparing a dataset that simulates cached user queries to a general LLM. 
 
 Generate a CSV file of the following format:
@@ -16,5 +20,3 @@ Your collection should satisfy the following diversity criteria:
 - The QueryTexts should vary in time sensitivity. You should have QueryTexts whose responses will be accurate for years (key scientific facts), and QueryTexts whose responses would become wrong in just a few minutes or hours (eg: weather) or days or weeks or months. 
 - 70 QueryTexts should be such that they warrant simple ResponseTexts; 30 QueryTexts should be more complex.
 - ResponseTexts should all be short and concise; around 100 tokens long.
-
-
