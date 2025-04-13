@@ -1,5 +1,5 @@
-# Use a lightweight version of python as the base
-FROM python:3.13-alpine
+# Use python as the base
+FROM python:3.13
 
 # Set the working directory for the docker container
 WORKDIR /code
