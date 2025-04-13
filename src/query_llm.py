@@ -2,7 +2,7 @@ import os
 import logging
 from datetime import datetime
 from openai import AsyncOpenAI
-from cache_response import cache_response
+from src.cache_response import cache_response
 
 client = AsyncOpenAI()
 

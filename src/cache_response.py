@@ -1,4 +1,4 @@
-from redis_client import redis_client
+from src.redis_client import redis_client
 import os
 
 def cache_response(query: str, responseText: str) -> bool:

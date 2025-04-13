@@ -1,5 +1,5 @@
 import os
-from redis_client import redis_client
+from src.redis_client import redis_client
 
 async def query_cache(query: str) -> str | None:
   """

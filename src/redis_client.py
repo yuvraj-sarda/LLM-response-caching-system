@@ -4,7 +4,6 @@ This file abstracts away the redis client to ensure that the same redis instance
 import os
 import redis
 
-# TODO: figure out if this needs to be running asynchronously to be able to support the desired load
 redis_client = redis.Redis(
     host=os.getenv('REDIS_HOST', 'redis'), # This approach allows the redis host to be set to localhost too, which enables objects outside the docker container to interact with it too (useful for quickly running tests).
     port=6379,
