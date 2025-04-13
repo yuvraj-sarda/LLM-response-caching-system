@@ -14,6 +14,10 @@ For caching, I chose Redis as the primary caching solution because it provides i
 
 For the tests, I'm using pytest – based on quick research, it seems to be the industry standard.
 
+Load Testing Explanation
+* Using proper async handling to ensure requests are processed properly via control loop
+* considered using redis asynchronously too, but that could cause race conditions and atomicity issues. And it is only a few milliseconds of retrieval time, so not worth it. LLM calls are much more slow and responsible for the bulk of the the latency.
+
 ## Explanation of your semantic similarity approach 
 (including why you chose specific embedding models and/or cross-encoders)
 
