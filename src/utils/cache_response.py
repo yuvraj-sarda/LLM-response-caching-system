@@ -1,7 +1,7 @@
-from src.redis_client import redis_client
+from src.utils.redis_client import redis_client
 import os
-import uuid
-from src.utils.get_embeddings import get_embedding
+# import uuid
+# from src.utils.get_embeddings import get_embedding
 
 def cache_response(query: str, response_text: str) -> bool:
     if os.getenv("DISABLE_AUTO_CACHE") == "TRUE":

@@ -13,7 +13,7 @@ import time
 import os
 import asyncio
 from src.server import handle_query, QueryRequest
-from src.redis_client import redis_client
+from src.utils.redis_client import redis_client
 import tracemalloc
 
 tracemalloc.start() # Used to check for memory leaks

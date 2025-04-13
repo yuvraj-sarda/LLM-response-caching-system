@@ -1,8 +1,8 @@
 import os
 import re
 import numpy as np
-from src.redis_client import redis_client
-from src.utils.get_embeddings import get_embedding
+from src.utils.redis_client import redis_client
+# from src.utils.get_embeddings import get_embedding
 from redis.commands.search.query import Query
 
 async def query_cache(query: str) -> str | None:
