@@ -1,6 +1,10 @@
 from .redis_client import redis_client
+import os
 
 def cache_response(query: str, responseText: str) -> bool:
+  if os.getenv("DISABLE_AUTO_CACHE") == "TRUE":
+    return False
+  
   return redis_client.set(query, responseText, ex=calculate_TTL(query))
 
 def calculate_TTL(query: str) -> int:
