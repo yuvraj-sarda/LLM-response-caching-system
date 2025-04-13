@@ -1,9 +1,10 @@
 import os
 import logging
 from datetime import datetime
-from openai import OpenAI
-client = OpenAI()
+from openai import AsyncOpenAI
 from cache_response import cache_response
+
+client = AsyncOpenAI()
 
 os.makedirs('logs', exist_ok=True)
 logging.basicConfig(
@@ -13,12 +14,13 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
+# TODO: probably need to add an intermediate data structure here to handle rate limits
 async def query_llm(query: str) -> str:
   try:
-    response = client.responses.create(
-      model="gpt-4o",
-      instructions="You are a helpful assistant.",
-      input=query,
+    response = await client.responses.create(
+        model="gpt-4o",
+        instructions="You are a helpful assistant.",
+        input=query,
     )    
 
     logging.info(f"Query: {query}")
