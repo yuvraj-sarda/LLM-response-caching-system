@@ -10,27 +10,45 @@ import os
 import asyncio
 from src.server import handle_query, QueryRequest
 from src.redis_client import redis_client
+import tracemalloc
 
-# TODO: reorder functions in this file
-def calculate_cost(queryText: str, responseText: str, source: str) -> float:
-    """Calculate the cost of a request based on its source and query length."""
-    match source:
-      case "cache":
-        return 0.0 # Cache hits are free
-      case "llm":
-        # TODO: there's definitely a better way of getting costs directly from openai.
-        # GPT-4 pricing: $0.03 per 1K tokens for input, $0.06 per 1K tokens for output
-        # Rough estimate: 1 token ~= 4 characters
-        input_tokens = len(queryText) / 4
-        # Assume output is roughly same length as input
-        output_tokens = len(responseText) / 4
-        return (input_tokens * 0.03 + output_tokens * 0.06) / 1000
-      case _:
-        print(f"Warning: unsupported response source: {source}")
-        return 0.0
+tracemalloc.start()
+
+async def main():
+    await initialise_cache()
+
+    # Read test queries with proper handling of empty strings
+    test_queries = pd.read_csv(
+        "src/evaluations/test_queries.csv",
+        keep_default_na=True,
+        na_values=['']
+    )
+
+    # Test different caching strategies
+    for strategy in ["exact_match_only", "no_cache"]:
+        test_results = await evaluate_strategy(strategy, test_queries)
+              
+        # Save results with proper handling of empty values
+        test_results.to_csv(
+            "src/evaluations/test_results.csv",
+            index=False,
+            na_rep=''
+        )
+        
+        await save_aggregated_results(test_results, strategy)
+
+async def initialise_cache():
+    redis_client.flushdb()
+    print("Flushed the db")
+    
+    past_queries = pd.read_csv("src/evaluations/past_queries.csv")
+    for index, row in past_queries.iterrows():
+        redis_client.set(row['QueryText'], row['ResponseText'])
+
+    print("Cached all queries.")
 
 async def evaluate_strategy(strategy: str, test_queries: pd.DataFrame) -> pd.DataFrame:
-    print(f"\nTesting strategy: {strategy}")
+    print(f"\n## Testing strategy: {strategy}")
     os.environ["CACHING_STRATEGY"] = strategy
     test_queries[strategy + '_response_time'] = 0.0
     test_queries[strategy + '_cost'] = 0.0
@@ -81,36 +99,22 @@ async def save_aggregated_results(test_results: pd.DataFrame, strategy) -> bool:
     with open("src/evaluations/test_results_aggregated.md", "a") as f:
         f.write(markdown_content)
 
-async def main():
-    redis_client.flushdb()
-    print("Flushed the db")
-    
-    past_queries = pd.read_csv("src/evaluations/past_queries.csv")
-    for index, row in past_queries.iterrows():
-        redis_client.set(row['QueryText'], row['ResponseText'])
-
-    print("Cached all queries.")
-
-    # Read test queries with proper handling of empty strings
-    test_queries = pd.read_csv(
-        "src/evaluations/test_queries.csv",
-        keep_default_na=True,
-        na_values=['']
-    )
-
-    # Test different caching strategies
-    for strategy in ["exact_match_only", "no_cache"]:
-        test_results = await evaluate_strategy(strategy, test_queries)
-              
-        # Save results with proper handling of empty values
-        test_results.to_csv(
-            "src/evaluations/test_results.csv",
-            index=False,
-            na_rep=''
-        )
-        
-        save_aggregated_results(test_results, strategy)
+def calculate_cost(queryText: str, responseText: str, source: str) -> float:
+    """Calculate the cost of a request based on its source and query length."""
+    match source:
+      case "cache":
+        return 0.0 # Cache hits are free
+      case "llm":
+        # TODO: there's definitely a better way of getting costs directly from openai.
+        # GPT-4 pricing: $0.03 per 1K tokens for input, $0.06 per 1K tokens for output
+        # Rough estimate: 1 token ~= 4 characters
+        input_tokens = len(queryText) / 4
+        # Assume output is roughly same length as input
+        output_tokens = len(responseText) / 4
+        return (input_tokens * 0.03 + output_tokens * 0.06) / 1000
+      case _:
+        print(f"Warning: unsupported response source: {source}")
+        return 0.0
 
 if __name__ == "__main__":
     asyncio.run(main())
-
