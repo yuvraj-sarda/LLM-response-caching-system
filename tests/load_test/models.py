@@ -66,6 +66,7 @@ class LoadTestResults:
                 print(f"Maximum LLM query time: {self.max_llm_query_time:.2f} seconds")
 
     def save_to_csv(self) -> None:
+        os.makedirs("logs", exist_ok=True)
         csv_file = os.path.join("logs", f"load_test.csv")
         
         with open(csv_file, 'w', newline='') as f:

@@ -80,6 +80,14 @@ This script tests the system's performance under load conditions by sending conc
 
 While the API route currently handles the request to OpenAI asynchronously correctly, it blocks when reading/writing to the Redis cache. I considered whether this should also be done asynchronously in order to maximise speed. However, this would break atomicity of operations and thus create potential race conditions. Moreover, given that Redis calls are really fast (sub-milliseconds), this didn't really contribute much to the response times. So, I didn't make the optimisation. 
 
+Note: These scripts are not run from inside the docker container. So, to run them, you need to create a virtual environment, activate it and then install the requirements.txt file in the local repository too.
+
+```bash
+python3 -m venv venv
+source venv/bin/activate  # On Windows use: venv\Scripts\activate
+pip install -r requirements.txt
+```
+
 ## Future Work
 - At the moment, the system only correctly retrieves items from the cache when there is an exact query match. This isn't ideal. I implemented a vector embedding based approach using HuggingFace's sentence transformers and Redis vector search. However, I was running into some integration issues with Redis and Docker and I didn't have time to debug that. So for now, I've just commented these sections of the code out. When I have some more time, I'll go through the documentation more thoroughly and debug this.
 
