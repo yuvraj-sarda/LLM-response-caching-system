@@ -3,3 +3,6 @@ personal_references
 .env
 __pycache__
 logs
+
+test_results_aggregated.md
+test_results.csv
